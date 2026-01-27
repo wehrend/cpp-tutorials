@@ -1,13 +1,18 @@
 #include <SDL2/SDL.h>
 #include <iostream>
+#include <vector>
 #include "Oscillator.h"
+
+// Ein globaler Puffer, damit der Renderer auf die Audiodaten zugreifen kann
+// Wir nutzen 400 Samples, passend zur Fensterbreite
+std::vector<float> visualBuffer(400, 0.0f);
 
 class SynthEngine {
 public:
     Oscillator osc;
     bool active;
 
-    SynthEngine() : osc(440.0, 0.2, 44100.0), active(false) {}
+    SynthEngine() : osc(440.0, 0.3, 44100.0), active(false) {}
 
     static void AudioCallback(void* userdata, Uint8* stream, int len) {
         SynthEngine* engine = static_cast<SynthEngine*>(userdata);
@@ -15,32 +20,26 @@ public:
         int length = len / sizeof(float);
 
         for (int i = 0; i < length; i++) {
-            // If active is true, the sample is calculated, otherwise 0.0f (silence)
-            // multiply with 0.05f for reasonable quiet sound
-            buffer[i] = 0.05f * ( engine->active ? engine->osc.getNextSample() : 0.0f);
+            float sample = engine->active ? engine->osc.getNextSample() : 0.0f;
+            buffer[i] = sample;
+
+            // Wir füllen den Visualisierungs-Puffer nur mit den ersten 400 Samples
+            if (i < visualBuffer.size()) {
+                visualBuffer[i] = sample;
+            }
         }
     }
 };
 
 int main(int argc, char* argv[]) {
-    // Initialize audio AND video (for the window/focus)
-    if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO) < 0) {
-        std::cerr << "SDL Error: " << SDL_GetError() << std::endl;
-        return 1;
-    }
+    SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO);
 
-    // Create a simple window so that we can get the keyboard focus
-    SDL_Window* window = SDL_CreateWindow(
-        "Synth Focus window", 
-        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
-        300, 200, 
-        SDL_WINDOW_SHOWN
-    );
-
-    if (!window) {
-        std::cerr << "Window Error: " << SDL_GetError() << std::endl;
-        return 1;
-    }
+    // Fenster und Renderer erstellen
+    SDL_Window* window = SDL_CreateWindow("C++ Synth Visualizer", 
+        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 400, 300, SDL_WINDOW_SHOWN);
+    
+    // Der Renderer ist unser "Pinsel" für das Fenster
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
     SynthEngine engine;
 
@@ -52,50 +51,49 @@ int main(int argc, char* argv[]) {
     ds.callback = SynthEngine::AudioCallback;
     ds.userdata = &engine;
 
-    if (SDL_OpenAudio(&ds, NULL) < 0) {
-        std::cerr << "Audio Error: " << SDL_GetError() << std::endl;
-        return 1;
-    }
-
-    SDL_PauseAudio(0); // start Audio-Thread
-
-    std::cout << "--- SYNTH ready ---" << std::endl;
-    std::cout << "1. Click on Window 'Synth focus window'" << std::endl;
-    std::cout << "2. Hold space key for sound" << std::endl;
-    std::cout << "3. Close window to exit" << std::endl;
+    SDL_OpenAudio(&ds, NULL);
+    SDL_PauseAudio(0);
 
     bool running = true;
     SDL_Event e;
     
-    while (running) { 
-        // Event loop: Important for keeping the window alive
+    while (running) {
         while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_QUIT) {
-                running = false;
-            }
+            if (e.type == SDL_QUIT) running = false;
         }
 
-        // poll keyboard state
         const Uint8* state = SDL_GetKeyboardState(NULL);
+        engine.active = state[SDL_SCANCODE_SPACE];
+
+        // --- GRAFIK RENDERING ---
         
-        // OOP: We set the internal state of our engine from the outside
-        if (state[SDL_SCANCODE_SPACE]) {
-            if (!engine.active) {
-                engine.active = true;
-            }
-        } else {
-            if (engine.active) {
-                engine.active = false;
-            }
+        // 1. Hintergrund löschen (Schwarz/Dunkelblau)
+        SDL_SetRenderDrawColor(renderer, 10, 10, 25, 255);
+        SDL_RenderClear(renderer);
+
+        // 2. Nulllinie zeichnen (Grau)
+        SDL_SetRenderDrawColor(renderer, 50, 50, 50, 255);
+        SDL_RenderDrawLine(renderer, 0, 150, 400, 150);
+
+        // 3. Wellenform zeichnen (Neongrün)
+        SDL_SetRenderDrawColor(renderer, 0, 255, 100, 255);
+        for (int x = 0; x < (int)visualBuffer.size() - 1; x++) {
+            // Wir skalieren den Sample-Wert (-1.0 bis 1.0) auf die Fensterhöhe
+            // 150 ist die Mitte des Fensters, 100 ist die Amplitude
+            int y1 = 150 - (int)(visualBuffer[x] * 100);
+            int y2 = 150 - (int)(visualBuffer[x+1] * 100);
+            SDL_RenderDrawLine(renderer, x, y1, x + 1, y2);
         }
 
-        SDL_Delay(10); // Prevents the CPU load from jumping to 100%
+        // 4. Alles auf den Bildschirm bringen
+        SDL_RenderPresent(renderer);
+
+        SDL_Delay(16); // Entspricht etwa 60 FPS
     }
 
-    // clean up
     SDL_CloseAudio();
+    SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
-
     return 0;
 }
