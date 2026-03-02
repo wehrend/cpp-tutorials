@@ -1,2 +1,2 @@
 build:
-	g++ -std=c++17 main.cpp -lSDL2 -o hello_tone
+	x86_64-w64-mingw32-g++ main.cpp -o hello_tone.exe --static -static-libgcc -static-libstdc++
