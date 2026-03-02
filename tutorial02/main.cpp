@@ -1,4 +1,8 @@
-#include <SDL2/SDL.h>
+#ifdef _WIN32
+    #include <SDL.h>
+#else
+    #include <SDL2/SDL.h>
+#endif
 #include <cmath>
 #include <iostream>
 #include <atomic>
@@ -36,7 +40,7 @@ void audioCallback(void* userdata, Uint8* stream, int len)
     }
 }
 
-int main()
+int main(int /*argc*/, char** /*argv*/)
 {
     if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO) != 0) {
         std::cerr << "SDL_Init failed: " << SDL_GetError() << "\n";
