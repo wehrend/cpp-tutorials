@@ -1,0 +1,3 @@
+/home/sven/development/cpp-tutorials/tutorial05 (b) with fonts/build/CMakeFiles/synth.dir
+/home/sven/development/cpp-tutorials/tutorial05 (b) with fonts/build/CMakeFiles/edit_cache.dir
+/home/sven/development/cpp-tutorials/tutorial05 (b) with fonts/build/CMakeFiles/rebuild_cache.dir

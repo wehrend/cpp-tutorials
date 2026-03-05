@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/synth.dir/main.cpp.o CMakeFiles/synth.dir/Oscillator.cpp.o -o synth  -lSDL2 -lSDL2_ttf -lSDL2 -lSDL2_ttf 
