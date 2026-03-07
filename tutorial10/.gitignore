@@ -1,0 +1,18 @@
+# Qt Creator Build-Ordner (Spezifisch für dein Projekt)
+build-*-Desktop-Debug/
+build-*-Desktop-Release/
+build-synth-*/
+
+# Allgemeine Qt/C++ Dateien, die nicht ins Git gehören
+*.user
+*.o
+*.obj
+Makefile
+moc_*.cpp
+ui_*.h
+qrc_*.cpp
+.qmake.stash
+
+# Ausführbare Dateien
+synth
+synth.exe*.o
