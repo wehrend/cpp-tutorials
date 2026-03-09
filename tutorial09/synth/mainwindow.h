@@ -4,63 +4,57 @@
 #include <QMainWindow>
 #include <QVector>
 #include <QPointF>
-#include <QtMath>
-#include <QAudioOutput>
 #include <QIODevice>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
+class QAudioOutput;
+class QPaintEvent;
+
+class AudioGenerator : public QIODevice
+{
+    Q_OBJECT
+
+public:
+    explicit AudioGenerator(QObject *parent = nullptr);
+
+    void setFrequency(float frequency);
+    void setAmplitude(float amplitude);
+
+    qint64 readData(char *data, qint64 maxlen) override;
+    qint64 writeData(const char *data, qint64 len) override;
+
+private:
+    float m_frequency = 440.0f;
+    float m_phase = 0.0f;
+    float m_amplitude = 8000.0f;
+};
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr);
-    ~MainWindow();
-
-private:
-    Ui::MainWindow *ui;
-    // In der mainwindow.h unter private:
-    class AudioGenerator *m_generator;
-    class QAudioOutput *m_audioOutput;
+    explicit MainWindow(QWidget *parent = nullptr);
+    ~MainWindow() override;
 
 protected:
-    void paintEvent(QPaintEvent *event) override; // This draws the waveform
+    void paintEvent(QPaintEvent *event) override;
 
 private:
+    static float sliderToLogFrequency(int value, int minValue, int maxValue,
+                                      float minFreq, float maxFreq);
+    static float sliderToLogAmplitude(int value, int minValue, int maxValue,
+                                      float minAmp, float maxAmp);
+    void generateWaveform();
+
+    Ui::MainWindow *ui = nullptr;
+    AudioGenerator *m_generator = nullptr;
+    QAudioOutput *m_audioOutput = nullptr;
     QVector<QPointF> waveformPoints;
-    float currentFreq = 440.0;
-    void generateWaveform(); // Logic to calculate the sine wave
+    float currentFreq = 440.0f;
 };
 
-class AudioGenerator : public QIODevice {
-    Q_OBJECT
-public:
-    // Konstruktor mit Parent, damit Qt den Speicher verwalten kann
-    AudioGenerator(QObject *parent = nullptr) : QIODevice(parent) {}
-
-    void setFrequency(float f) { m_frequency = f; }
-
-    qint64 readData(char *data, qint64 maxlen) override {
-        qint16 *samples = reinterpret_cast<qint16*>(data);
-        int sampleCount = maxlen / sizeof(qint16);
-        for (int i = 0; i < sampleCount; ++i) {
-            float val = 8000.0 * qSin(m_phase);
-            samples[i] = static_cast<qint16>(val);
-            m_phase += 2.0 * M_PI * m_frequency / 44100.0;
-            if (m_phase > 2.0 * M_PI) m_phase -= 2.0 * M_PI;
-        }
-        return maxlen;
-    }
-
-    qint64 writeData(const char *data, qint64 len) override {
-        Q_UNUSED(data); Q_UNUSED(len); return 0;
-    }
-
-private:
-    float m_frequency = 440.0;
-    float m_phase = 0.0;
-};
 #endif // MAINWINDOW_H
