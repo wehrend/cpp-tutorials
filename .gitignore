@@ -3,3 +3,6 @@
 *.bmp
 *.BMP
 *.exe
+SDL2-2.30.1
+SDL2.dll
+SDL2_ttf.dll
